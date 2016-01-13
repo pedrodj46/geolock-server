@@ -12,18 +12,23 @@
 	$androidid=$json->androidid;
 
 	$conn=dbConnect();
-	$sql="SELECT * FROM ".$tabella." WHERE username='".$username."' AND password='".md5($password)."'";
+	$sql="SELECT * FROM ".$tabella." WHERE username='".$username."' AND password='".base64_encode($password)."'";
 	$risposta=mysql_query($sql) or die("Erorre ".mysql_error());
 	$riga=mysql_fetch_array($risposta);
-	if($riga['password']==md5($password)){
+	if($riga['password']==base64_encode($password)){
 
-		$id_utente=$riga['id'];
+		if($riga['attivo']==0){
+			echo "-1";
+		}
+		else{
+			$id_utente=$riga['id'];
 
-		$array1=['data', 'id_utente', 'email_utente', 'device', 'androidid'];
-		$array2=[date("Y-m-d H:i:s"), $id_utente, $username, $device, $androidid];
-		$controllo=queryGo($tabella."_login", $array1, $array2, "");
+			$array1=['data', 'id_utente', 'email_utente', 'device', 'androidid'];
+			$array2=[date("Y-m-d H:i:s"), $id_utente, $username, $device, $androidid];
+			$controllo=queryGo($tabella."_login", $array1, $array2, "");
 
-		echo $riga['id'];
+			echo $id_utente;
+		}
 	}
 	else{
 		echo 0;

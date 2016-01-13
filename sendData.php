@@ -61,70 +61,87 @@
 	$idF=$riga['maxid'];
 
 	//$sql="SELECT * FROM tab_users WHERE id!=".$idUtente;
-	$sql="SELECT * FROM tab_users";
+	$sql="SELECT * FROM tab_users WHERE attivo=1";
 	$risposta=mysql_query($sql) or die("Errore ".mysql_error());
+	$lista_androidid=array();
 	while($riga=mysql_fetch_array($risposta)){
 		$idUtenteSel=$riga['id'];
 
-		$sql2="SELECT * FROM tab_users_position WHERE id_utente=".$idUtenteSel." AND accuracy<60 LIMIT 1";
+		$sql2="SELECT * FROM tab_users_position WHERE id_utente=".$idUtenteSel." AND accuracy<60 ORDER BY data DESC LIMIT 1";
 		$risposta2=mysql_query($sql2) or die("Errore ".mysql_error());
 		$riga2=mysql_fetch_array($risposta2);
 		$idPosizione=$riga2['id'];
 
 		$androidid=$riga2['androidid'];
 
-		$longitude1=$lon_cerchio;
-		$longitude2=$riga2['longitudine'];
-		$latitude1=$lat_cerchio;
-		$latitude2=$riga2['latitudine'];
+		if(empty($lista_androidid)){
+			array_push($lista_androidid, $androidid);
+			$continue=true;
+		}
+		else{
+			if(in_array($androidid, $lista_androidid)){
+				$continue=false;
+			}
+			else{
+				$continue=true;
+			}
+		}
 
-		$theta = $longitude1 - $longitude2;
-		$distance = (sin(deg2rad($latitude1)) * sin(deg2rad($latitude2))) + (cos(deg2rad($latitude1)) * cos(deg2rad($latitude2)) * cos(deg2rad($theta)));
-		$distance = acos($distance);
-		$distance = rad2deg($distance);
-		$distance = $distance * 60 * 1.1515 * 1.609344;
-		$distance=round($distance,2);
+		if($continue){
 
-		if($distance<=$raggio){
+			$longitude1=$lon_cerchio;
+			$longitude2=$riga2['longitudine'];
+			$latitude1=$lat_cerchio;
+			$latitude2=$riga2['latitudine'];
 
-			$array1=['data', 'id_utente_invio', 'id_utente_ricezione', 'id_foto', 'letta'];
-			$array2=[date("Y-m-d H:i:s"), $idUtente, $idUtenteSel, $idF ,0];
+			$theta = $longitude1 - $longitude2;
+			$distance = (sin(deg2rad($latitude1)) * sin(deg2rad($latitude2))) + (cos(deg2rad($latitude1)) * cos(deg2rad($latitude2)) * cos(deg2rad($theta)));
+			$distance = acos($distance);
+			$distance = rad2deg($distance);
+			$distance = $distance * 60 * 1.1515 * 1.609344;
+			$distance=round($distance,2);
 
-			$where="";
+			if($distance<=$raggio){
 
-			$controllo=queryGo("tab_notification", $array1, $array2, $where);
+				$array1=['data', 'id_utente_invio', 'id_utente_ricezione', 'id_foto', 'letta'];
+				$array2=[date("Y-m-d H:i:s"), $idUtente, $idUtenteSel, $idF ,0];
 
-			$conn=dbConnect();
+				$where="";
 
-			$sql3="SELECT MAX(id) AS maxidN FROM tab_notification";
-			$risposta3=mysql_query($sql3) or die("Errore ".mysql_error());
-			$riga3=mysql_fetch_array($risposta3);
-			$idN=$riga3['maxidN'];
+				$controllo=queryGo("tab_notification", $array1, $array2, $where);
 
-			$tabella="tab_regid";
+				$conn=dbConnect();
 
-			$sql3="SELECT * FROM ".$tabella." WHERE androidid LIKE '".$androidid."'";
-			$risposta3=mysql_query($sql3) or die("Errore 2 ".mysql_error());
-			$riga3=mysql_fetch_array($risposta3);
-			$regid=$riga3['regid'];
+				$sql3="SELECT MAX(id) AS maxidN FROM tab_notification";
+				$risposta3=mysql_query($sql3) or die("Errore ".mysql_error());
+				$riga3=mysql_fetch_array($risposta3);
+				$idN=$riga3['maxidN'];
 
-			$url='https://android.googleapis.com/gcm/send';
-			define("GOOGLE_API_KEY","AIzaSyDEKQuGK7n4EHSKX74dZQm7kuk468bV2GA");
-			$registration_ids=array($regid);
-			$message=array("message" => array("titolo" => "Nuovo oggetto da identificare!", "testo" => "Si sta dirigendo verso di te questo oggetto", "idFoto" => "".$idF."", "idNotifica" => "".$idN.""));
-			$fields=array('registration_ids' => $registration_ids,'data' =>$message);
-			$headers=array('Authorization: key='.GOOGLE_API_KEY,'Content-Type: application/json');
+				$tabella="tab_regid";
 
-			$ccurl=curl_init();
-			curl_setopt($ccurl, CURLOPT_URL, $url);
-			curl_setopt($ccurl, CURLOPT_POST, true);
-			curl_setopt($ccurl, CURLOPT_HTTPHEADER, $headers);
-			curl_setopt($ccurl, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ccurl, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt($ccurl, CURLOPT_POSTFIELDS, json_encode($fields));
+				$sql3="SELECT * FROM ".$tabella." WHERE androidid LIKE '".$androidid."'";
+				$risposta3=mysql_query($sql3) or die("Errore 2 ".mysql_error());
+				$riga3=mysql_fetch_array($risposta3);
+				$regid=$riga3['regid'];
 
-			$result=curl_exec($ccurl);
-			curl_close($ccurl);
+				$url='https://android.googleapis.com/gcm/send';
+				define("GOOGLE_API_KEY","AIzaSyDEKQuGK7n4EHSKX74dZQm7kuk468bV2GA");
+				$registration_ids=array($regid);
+				$message=array("message" => array("titolo" => "Nuovo oggetto da identificare!", "testo" => "Si sta dirigendo verso di te questo oggetto", "idFoto" => "".$idF."", "idNotifica" => "".$idN.""));
+				$fields=array('registration_ids' => $registration_ids,'data' =>$message);
+				$headers=array('Authorization: key='.GOOGLE_API_KEY,'Content-Type: application/json');
+
+				$ccurl=curl_init();
+				curl_setopt($ccurl, CURLOPT_URL, $url);
+				curl_setopt($ccurl, CURLOPT_POST, true);
+				curl_setopt($ccurl, CURLOPT_HTTPHEADER, $headers);
+				curl_setopt($ccurl, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ccurl, CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($ccurl, CURLOPT_POSTFIELDS, json_encode($fields));
+
+				$result=curl_exec($ccurl);
+				curl_close($ccurl);
+			}
 		}
 	}
 
