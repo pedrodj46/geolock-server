@@ -5,7 +5,7 @@
 	$tabella="tab_images";
 
 	$conn=dbConnect();
-	$sql="SELECT * FROM ".$tabella." ORDER BY data DESC LIMIT 1";
+	$sql="SELECT * FROM ".$tabella." WHERE id=96";
 	$risposta=mysql_query($sql);
 	while($riga=mysql_fetch_array($risposta)){
     $data=$riga['data'];
